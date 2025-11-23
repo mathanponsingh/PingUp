@@ -42,7 +42,7 @@ const syncUserUpdation = inngest.createFunction(
     }
     await User.findByIdAndUpdate(id, updatedUserData)
   }
-);
+)
 
 // Inngest Function to delete user data from database
 
