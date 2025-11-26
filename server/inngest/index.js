@@ -157,7 +157,7 @@ const sendNotificationOfunseenMessages = inngest.createFunction(
         body
       })
     }
-    return {message:'Notification send'}
+    return {message:'Notification send.'}
   }
 )
 
