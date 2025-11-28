@@ -5,32 +5,30 @@ import Message from '../models/Message.js';
 const connections = {}
 
 // Controller function for the SSE endpoint
-export const ssController = (req,res)=>{
-    const {userId} = req.params
-    console.log('New client connected',userId);
+export const ssController = (req, res) => {
+  const { userId } = req.params;
+  console.log("New client connected", userId);
 
-    // Set SSE headers
+  // Correct SSE headers
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("Access-Control-Allow-Origin", "*");
 
-    res.setHeader('Content-type','text/event-stream')
-    res.setHeader("Cache-Control", "no-cache")
-    res.setHeader("Connection", "keep-alive")
-    res.setHeader("Access-Control-Allow-Origin", "*");
+  // Store connection
+  connections[userId] = res;
 
-    // Add the client's response object to the connection object
+  // Send initial event (correct format)
+  res.write("log: Connected to SSE stream\n\n");
 
-    connections[userId] = res
-
-    // Send an initial event to the client
-    res.write('log: Connected to SSE stream\n\n')
-
-    // handle client disconnection
-    req.on('close',()=>{
-        // remove the client's response object from the connections array
-        delete connections[userId]
-        console.log('Client disconnected');
-    })
-
+  // Handle disconnect
+  req.on("close", () => {
+    delete connections[userId];
+    console.log("Client disconnected");
+  })
 }
+
+
 
 // Send Message
 export const sendMessage = async (req,res) => {
@@ -106,7 +104,9 @@ export const getChatMessages = async (req,res) => {
 export const getUserRecentMessages = async (req,res) => {
     try {
         const {userId} = req.auth()
-        const messages = await Message.find({ to_user_id: userId }.populate("from_user_id to_user_id")).sort({createdAt:-1})
+        const messages = await Message.find({ to_user_id: userId })
+          .populate("from_user_id to_user_id")
+          .sort({ createdAt: -1 });
         res.json({ success: true, messages });
     } catch (error) {
         console.log(error);

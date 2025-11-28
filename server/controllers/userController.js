@@ -128,11 +128,11 @@ export const followUser = async (req, res) => {
       });
     }
 
-    user.following().push(id);
+    user.following.push(id);
     await user.save();
 
     const toUser = await User.findById(id);
-    toUser.followers().push(userId);
+    toUser.followers.push(userId);
     await toUser.save();
 
     res.json({ success: true, message: "Now you are following this user" });
@@ -192,7 +192,7 @@ export const sendConnectionRequest = async (req, res) => {
       $or: [
         { from_user_id: userId, to_user_id: id },
         { from_user_id: id, to_user_id: userId },
-      ],
+      ]
     });
 
     if (!connection) {
@@ -256,22 +256,40 @@ export const acceptConnectionRequest = async (req, res) => {
   try {
     const { userId } = req.auth();
     const { id } = req.body;
+
+    // 1. Find and check the Connection request status
     const connection = await Connection.findOne({
       from_user_id: id,
       to_user_id: userId,
     });
+
     if (!connection) {
       return res.json({ success: false, message: "Connection not found" });
     }
-    const user = await User.findById(userId);
-    user.connections.push(id);
-    await user.save();
 
+    // --- Start of Connection Logic Fix ---
+
+    const user = await User.findById(userId);
     const toUser = await User.findById(id);
-    toUser.connections.push(userId);
-    await toUser.save();
-    connection.status = "Accepted";
+
+    // CRITICAL CHECK 1: Only push the new ID if it doesn't already exist
+    if (!user.connections.includes(id)) {
+      user.connections.push(id);
+      await user.save();
+    }
+
+    // CRITICAL CHECK 2: Only push the current user's ID if it doesn't already exist
+    if (!toUser.connections.includes(userId)) {
+      toUser.connections.push(userId);
+      await toUser.save();
+    }
+
+    // --- End of Connection Logic Fix ---
+
+    // 2. Update the Connection status
+    connection.status = "accepted";
     await connection.save();
+
     res.json({ success: true, message: "Connection accepted successfully" });
   } catch (error) {
     console.log(error);
